@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Point Selector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='output.css') }}">
+    <style>
+        canvas.grabbing { cursor: grabbing; }
+        canvas.pointer { cursor: pointer; }
+        /* Style range inputs a bit */
+        input[type=range] { -webkit-appearance: none; appearance: none; width: 100px; height: 8px; background: #d3d3d3; outline: none; opacity: 0.7; -webkit-transition: .2s; transition: opacity .2s; border-radius: 4px;}
+        input[type=range]:hover { opacity: 1; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; background: #4a90e2; cursor: pointer; border-radius: 50%;}
+        input[type=range]::-moz-range-thumb { width: 16px; height: 16px; background: #4a90e2; cursor: pointer; border-radius: 50%; border: none;}
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8 font-sans text-gray-800">
+    <h1 class="text-2xl md:text-3xl font-bold mb-6 text-center">Interactive Point Selector</h1>
+
+    <!-- Image Loader Section -->
+    <div class="bg-white shadow-md rounded-lg p-4 md:p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">Load Images</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+            <!-- Fixed Image Load Area -->
+            <div class="border border-gray-200 rounded p-4">
+                <h3 class="font-medium mb-2 text-gray-600">Fixed Image</h3>
+                <div id="fixedDropZone" data-target="fixed" class="drop-zone border-2 border-dashed border-gray-300 rounded p-6 mb-3 text-center bg-gray-50 hover:bg-gray-100 transition">
+                    <p class="text-gray-500 text-sm">Use File/URL input below<br>(Drag & Drop may not work reliably)</p>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <!-- Inputs -->
+                    <div class="flex items-center gap-2">
+                        <label for="fixedFile" class="w-16 text-right pr-2">File:</label>
+                        <input type="file" id="fixedFile" accept="image/*" data-target="fixed" class="flex-grow p-1 border rounded text-xs">
+                    </div>
+                    <div class="text-center text-gray-400 text-xs">OR</div>
+                     <div class="flex items-center gap-2">
+                        <label for="fixedUrl" class="w-16 text-right pr-2">URL:</label>
+                        <input type="text" id="fixedUrl" placeholder="Enter image URL" data-target="fixed" class="flex-grow p-1 border rounded text-xs">
+                    </div>
+                </div>
+            </div>
+            <!-- Moving Image Load Area -->
+             <div class="border border-gray-200 rounded p-4">
+                <h3 class="font-medium mb-2 text-gray-600">Moving Image</h3>
+                <div id="movingDropZone" data-target="moving" class="drop-zone border-2 border-dashed border-gray-300 rounded p-6 mb-3 text-center bg-gray-50 hover:bg-gray-100 transition">
+                     <p class="text-gray-500 text-sm">Use File/URL input below<br>(Drag & Drop may not work reliably)</p>
+                </div>
+                 <div class="space-y-2 text-sm">
+                     <div class="flex items-center gap-2">
+                        <label for="movingFile" class="w-16 text-right pr-2">File:</label>
+                        <input type="file" id="movingFile" accept="image/*" data-target="moving" class="flex-grow p-1 border rounded text-xs">
+                    </div>
+                    <div class="text-center text-gray-400 text-xs">OR</div>
+                     <div class="flex items-center gap-2">
+                        <label for="movingUrl" class="w-16 text-right pr-2">URL:</label>
+                        <input type="text" id="movingUrl" placeholder="Enter image URL" data-target="moving" class="flex-grow p-1 border rounded text-xs">
+                    </div>
+                </div>
+            </div>
+        </div>
+         <div class="text-center">
+            <button id="loadImagesButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded transition shadow">Load Images from Inputs</button>
+        </div>
+        <p id="loadStatus" class="mt-3 text-center font-medium min-h-[1.2em]"></p>
+    </div>
+
+    <!-- Canvases Container -->
+    <div id="canvasContainer" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8">
+        <!-- Fixed Image Area -->
+        <div class="bg-white shadow-md rounded-lg p-4 text-center flex flex-col">
+            <h2 class="text-lg font-semibold mb-3 text-gray-700">Fixed Image</h2>
+            <div class="flex-grow flex flex-col items-center gap-4"> <!-- Allow vertical growth -->
+                 <!-- Main Canvas Wrapper -->
+                 <div class="w-full max-w-xl border border-gray-300 shadow-sm relative"> <!-- Increased max-width -->
+                     <canvas id="fixedCanvas" class="block w-full h-auto cursor-crosshair"></canvas>
+                 </div>
+                 <!-- Detail View & Zoom Control -->
+                 <div class="border border-gray-300 p-3 bg-gray-50 rounded w-full max-w-xs mx-auto mt-auto"> <!-- Push to bottom -->
+                     <h3 class="text-sm font-medium mb-1 text-gray-600">Detail View (Fixed)</h3>
+                      <div class="flex items-center justify-center gap-4">
+                        <canvas id="fixedDetailCanvas" width="150" height="150" class="border border-black bg-white"></canvas>
+                        <div class="text-xs text-gray-600 flex flex-col items-center gap-1">
+                            <label for="fixedZoom">Zoom:</label>
+                            <!-- Using range slider -->
+                            <input type="range" id="fixedZoom" name="fixedZoom" min="1" max="10" value="4" step="0.5" class="zoom-slider">
+                            <!-- Or using number input
+                            <input type="number" id="fixedZoom" name="fixedZoom" min="1" max="10" value="4" step="0.5" class="w-16 p-1 border rounded text-center zoom-input">
+                            -->
+                            <span id="fixedZoomValue" class="font-mono">x4.0</span>
+                        </div>
+                      </div>
+                 </div>
+            </div>
+            <p class="mt-3 text-sm text-gray-600">Points: <span id="fixedCount" class="font-semibold">0</span></p>
+        </div>
+        <!-- Moving Image Area -->
+        <div class="bg-white shadow-md rounded-lg p-4 text-center flex flex-col">
+            <h2 class="text-lg font-semibold mb-3 text-gray-700">Moving Image</h2>
+             <div class="flex-grow flex flex-col items-center gap-4">
+                 <!-- Main Canvas Wrapper -->
+                 <div class="w-full max-w-xl border border-gray-300 shadow-sm relative">
+                     <canvas id="movingCanvas" class="block w-full h-auto cursor-crosshair"></canvas>
+                 </div>
+                 <!-- Detail View & Zoom Control -->
+                 <div class="border border-gray-300 p-3 bg-gray-50 rounded w-full max-w-xs mx-auto mt-auto">
+                     <h3 class="text-sm font-medium mb-1 text-gray-600">Detail View (Moving)</h3>
+                     <div class="flex items-center justify-center gap-4">
+                         <canvas id="movingDetailCanvas" width="150" height="150" class="border border-black bg-white"></canvas>
+                          <div class="text-xs text-gray-600 flex flex-col items-center gap-1">
+                             <label for="movingZoom">Zoom:</label>
+                             <input type="range" id="movingZoom" name="movingZoom" min="1" max="10" value="4" step="0.5" class="zoom-slider">
+                             <!-- <input type="number" id="movingZoom" name="movingZoom" min="1" max="10" value="4" step="0.5" class="w-16 p-1 border rounded text-center zoom-input"> -->
+                             <span id="movingZoomValue" class="font-mono">x4.0</span>
+                         </div>
+                    </div>
+                 </div>
+            </div>
+            <p class="mt-3 text-sm text-gray-600">Points: <span id="movingCount" class="font-semibold">0</span></p>
+       </div>
+    </div>
+
+    <!-- Controls Area -->
+    <div id="controlsArea" class="hidden bg-white shadow-md rounded-lg p-4 mt-6 text-center">
+        <p id="status" class="mb-4 font-medium min-h-[1.2em]">Status: Load images first.</p>
+        <div class="flex flex-wrap justify-center gap-3">
+            <button id="submitButton" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition shadow disabled:opacity-50 text-sm" disabled>Submit Points</button>
+            <button id="resetButton" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition shadow text-sm">Reset Last Pair</button>
+            <button id="clearAllButton" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition shadow text-sm">Clear All Points</button>
+            <!-- Save Button Added -->
+            <button id="savePointsButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition shadow disabled:opacity-50 text-sm" disabled>Save Points (CSV)</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
