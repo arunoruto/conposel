@@ -1,7 +1,8 @@
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./templates/**/*.html", // Scan HTML files in templates
-    "./static/**/*.js",      // Scan JS files for potential class names (optional but good practice)
+    "./public/**/*.html", // Scan HTML files in public
+    "./public/**/*.js",   // Scan JS files in public
   ],
   theme: {
     extend: {},

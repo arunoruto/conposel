@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add any custom base styles here if needed */
+body {
+  @apply bg-gray-100;
+}
+canvas {
+  cursor: crosshair;
+  @apply border border-gray-400 bg-white; /* Basic canvas styling */
+}
